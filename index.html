@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistenza Informatica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        :root {
+            --bg: #000000;
+            --card-bg: rgba(255, 255, 255, 0.04);
+        }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            color: #f8fafc;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-display { font-family: 'Space Grotesk', sans-serif; }
+        
+        .glass-card { 
+            background: var(--card-bg); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .service-selected {
+            transform: scale(1.02) translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(255, 255, 255, 0.1);
+        }
+
+        .scroll-container-wrapper { position: relative; }
+        .scroll-container-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 40px;
+            background: linear-gradient(to right, transparent, rgba(0,0,0,0.95));
+            pointer-events: none;
+            border-radius: 0 1rem 1rem 0;
+            opacity: 1;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+        .scroll-container-wrapper.at-end::after { opacity: 0; }
+
+        @keyframes slideRightHint {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(3px); }
+        }
+        @keyframes slideLeftHint {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-3px); }
+        }
+        @keyframes fadeUpVideo {
+            0% { opacity: 0; transform: scale(1.05); }
+            100% { opacity: 0.4; transform: scale(1); }
+        }
+        @keyframes slideUpCard {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideUpSpring {
+            0% { transform: translateY(120%) scale(0.95); opacity: 0; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .animate-scroll-right { animation: slideRightHint 1.5s ease-in-out infinite; }
+        .animate-scroll-left { animation: slideLeftHint 1.5s ease-in-out infinite; }
+        .animate-video { animation: fadeUpVideo 2s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .animate-card { opacity: 0; animation: slideUpCard 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .animate-bar { animation: slideUpSpring 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .shake { animation: shake 0.3s ease; }
+
+        .drawer-content {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, margin-bottom 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            margin-bottom: 0;
+        }
+        .drawer-open .drawer-content {
+            grid-template-rows: 1fr;
+            opacity: 1;
+            margin-bottom: 0.75rem;
+        }
+        .drawer-inner { 
+            overflow: hidden; 
+            min-height: 0; 
+        }
+
+        .drawer-open #expand-hint-wrapper {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #preview-wrapper {
+            display: grid;
+            grid-template-rows: 1fr;
+            transition: grid-template-rows 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+            opacity: 1;
+        }
+        .drawer-open #preview-wrapper {
+            grid-template-rows: 0fr;
+            opacity: 0;
+        }
+        .preview-inner {
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* MODAL */
+        #service-modal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-active {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        .modal-content-anim {
+            transform: translateY(20px);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .modal-active .modal-content-anim {
+            transform: translateY(0);
+        }
+
+        /* LIST VIEW */
+        .view-list .service-card {
+            flex-direction: row !important;
+            min-height: auto !important;
+        }
+        .view-list .service-thumb {
+            display: block !important;
+            width: 10rem;
+            height: auto;
+            object-fit: cover;
+            border-radius: 1rem 0 0 1rem;
+            flex-shrink: 0;
+        }
+        .view-list .card-content {
+            flex: 1;
+            padding: 1.5rem;
+        }
+        .view-list .card-overlay {
+            background: rgba(0,0,0,0.6) !important;
+        }
+
+        /* MOBILE: card compatta */
+        @media (max-width: 480px) {
+            .view-list .service-thumb {
+                width: 7rem !important;
+                border-radius: 0.8rem 0 0 0.8rem;
+            }
+            .view-list .card-content {
+                padding: 1.2rem !important;
+                gap: 0.5rem !important;
+            }
+            .view-list .service-card {
+                border-radius: 1rem !important;
+            }
+            /* Su schermi molto piccoli, impila */
+            @media (max-width: 380px) {
+                .view-list .service-card {
+                    flex-direction: column !important;
+                }
+                .view-list .service-thumb {
+                    width: 100% !important;
+                    height: 140px !important;
+                    border-radius: 0.8rem 0.8rem 0 0 !important;
+                }
+            }
+        }
+
+        /* HOW IT WORKS */
+        #how-it-works-section {
+            margin-bottom: 2.5rem;
+            margin-top: 1.5rem;
+        }
+        #how-it-works-toggle {
+            cursor: pointer;
+            user-select: none;
+        }
+        #how-it-works-content {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #how-it-works-content.hiw-open {
+            grid-template-rows: 1fr;
+        }
+        #how-it-works-inner {
+            overflow: hidden;
+            min-height: 0;
+        }
+        #how-it-works-arrow {
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #how-it-works-arrow.rotated {
+            transform: rotate(180deg);
+        }
+
+        /* ERROR TOOLTIP */
+        .error-tooltip {
+            position: absolute;
+            top: -2.2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(5px);
+            background: #ef4444;
+            color: white;
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            z-index: 60;
+        }
+        .error-tooltip::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #ef4444;
+        }
+        .error-tooltip.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* PREVIEW COMPATTA MOBILE */
+        @media (max-width: 640px) {
+            #preview-section {
+                max-height: 3.5rem !important;
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
+                flex-wrap: nowrap !important;
+                gap: 0.5rem !important;
+                margin-bottom: 0.5rem !important;
+                padding-bottom: 0.5rem !important;
+                -webkit-overflow-scrolling: touch;
+            }
+            #mini-selection-list {
+                flex-wrap: nowrap !important;
+                gap: 0.4rem !important;
+            }
+            #mini-selection-list > div {
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding: 0.25rem 0.6rem !important;
+                font-size: 0.7rem !important;
+                border-radius: 0.6rem !important;
+            }
+            #mini-selection-list button {
+                display: none !important;
+            }
+            #bar-container {
+                padding: 0.5rem !important;
+            }
+            #total-price {
+                font-size: 1.5rem !important;
+            }
+            #selected-label {
+                font-size: 0.65rem !important;
+            }
+            #total-savings {
+                font-size: 0.65rem !important;
+            }
+            #username {
+                padding: 0.5rem 0.75rem !important;
+                font-size: 0.8rem !important;
+            }
+            #send-btn {
+                padding: 0.5rem 1rem !important;
+                font-size: 0.8rem !important;
+            }
+            #drawer-pill {
+                width: 2rem !important;
+                height: 2rem !important;
+                top: 0.5rem !important;
+                right: 0.5rem !important;
+            }
+            #drawer-pill i {
+                width: 1rem !important;
+                height: 1rem !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HERO VIDEO -->
+    <section class="relative h-[40vh] md:h-[55vh] w-full flex flex-col items-center justify-end pb-6 md:pb-8 overflow-hidden">
+        <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover z-0 animate-video" poster="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2940&auto=format&fit=crop">
+            <source src="https://cdn.pixabay.com/video/2022/11/01/137351-766782200_large.mp4" type="video/mp4">
+        </video>
+        <div class="absolute inset-0 bg-gradient-to-b from-black/20 via-black/60 to-black z-10"></div>
+
+        <div id="hero-title" class="relative z-20 text-center px-4 md:px-6">
+            <h1 class="text-5xl md:text-[7vw] font-display font-bold leading-[0.9] tracking-tighter text-white drop-shadow-2xl">
+                Assistenza<br/>
+                <span id="hero-accent" class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400 transition-all duration-700">Informatica</span>
+            </h1>
+            <p class="mt-4 md:mt-6 text-slate-400 text-sm md:text-lg max-w-lg mx-auto font-light">
+                Seleziona i servizi e ottieni il tuo preventivo immediato.
+            </p>
+        </div>
+    </section>
+
+    <main id="main-content" class="relative z-20 max-w-7xl mx-auto px-4 md:px-6 pb-64 mt-6 md:mt-6">
+        
+        <!-- CATEGORIE -->
+        <div class="sticky top-3 md:top-4 z-40 mb-8 md:mb-10 scroll-container-wrapper" id="cat-wrapper">
+            <button id="scroll-hint-left" onclick="scrollCategories(-1)" class="absolute left-2 md:left-2 top-1/2 -translate-y-1/2 z-20 transition-all duration-300 flex items-center justify-center w-8 h-8 md:w-8 md:h-8 rounded-full bg-black/80 backdrop-blur-md border border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.8)] cursor-pointer hover:bg-black/90 active:scale-90 opacity-0 pointer-events-none">
+                <i data-lucide="chevron-left" class="w-4 h-4 md:w-4 md:h-4 text-white"></i>
+            </button>
+            
+            <button id="scroll-hint-right" onclick="scrollCategories(1)" class="absolute right-2 md:right-2 top-1/2 -translate-y-1/2 z-20 transition-all duration-300 flex items-center justify-center w-8 h-8 md:w-8 md:h-8 rounded-full bg-black/80 backdrop-blur-md border border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.8)] cursor-pointer hover:bg-black/90 active:scale-90 opacity-0 pointer-events-none">
+                <i data-lucide="chevron-right" class="w-4 h-4 md:w-4 md:h-4 text-white"></i>
+            </button>
+
+            <div id="cat-scroll" onscroll="updateScrollHints()" class="flex gap-2 md:gap-1.5 overflow-x-auto p-2 md:p-1.5 glass-card rounded-xl md:rounded-2xl no-scrollbar shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-black/50 scroll-smooth">
+                <button onclick="switchCategory('pc', this)" class="cat-btn active flex-1 px-4 py-3 md:px-8 md:py-4 rounded-lg md:rounded-xl text-xs md:text-xs font-black uppercase whitespace-nowrap bg-indigo-500 text-white transition-all active:scale-95">Windows</button>
+                <button onclick="switchCategory('apple', this)" class="cat-btn flex-1 px-4 py-3 md:px-8 md:py-4 rounded-lg md:rounded-xl text-xs md:text-xs font-black uppercase whitespace-nowrap bg-transparent text-slate-400 hover:bg-white/10 transition-all active:scale-95">Apple Mac</button>
+                <button onclick="switchCategory('android_phone', this)" class="cat-btn flex-1 px-4 py-3 md:px-8 md:py-4 rounded-lg md:rounded-xl text-xs md:text-xs font-black uppercase whitespace-nowrap bg-transparent text-slate-400 hover:bg-white/10 transition-all active:scale-95">Smartphone Android</button>
+                <button onclick="switchCategory('android_tablet', this)" class="cat-btn flex-1 px-4 py-3 md:px-8 md:py-4 rounded-lg md:rounded-xl text-xs md:text-xs font-black uppercase whitespace-nowrap bg-transparent text-slate-400 hover:bg-white/10 transition-all active:scale-95">Tablet Android</button>
+                <button onclick="switchCategory('special', this)" class="cat-btn flex-1 px-4 py-3 md:px-8 md:py-4 rounded-lg md:rounded-xl text-xs md:text-xs font-black uppercase whitespace-nowrap bg-transparent text-slate-400 hover:bg-white/10 transition-all active:scale-95">Speciali</button>
+                <button onclick="switchCategory('packs', this)" class="cat-btn flex-1 px-4 py-3 md:px-8 md:py-4 rounded-lg md:rounded-xl text-xs md:text-xs font-black uppercase whitespace-nowrap bg-transparent text-slate-400 hover:bg-white/10 transition-all active:scale-95">Offerte & Pack</button>
+            </div>
+        </div>
+
+        <!-- COME FUNZIONA (TENDINA ESPANDIBILE) -->
+        <div id="how-it-works-section">
+            <div id="how-it-works-toggle" onclick="toggleHowItWorks()" class="glass-card rounded-2xl p-5 md:p-6 flex items-center justify-between hover:bg-white/5 transition-all active:scale-[0.99]">
+                <h3 class="text-white font-display font-bold text-2xl md:text-3xl">Come funziona</h3>
+                <div class="flex items-center gap-3 md:gap-3">
+                    <span id="how-it-works-label" class="text-slate-400 text-xs md:text-xs font-bold uppercase tracking-widest">Scopri</span>
+                    <i data-lucide="chevron-down" id="how-it-works-arrow" class="w-6 h-6 md:w-6 md:h-6 text-indigo-400 transition-transform"></i>
+                </div>
+            </div>
+            <div id="how-it-works-content" class="mt-4 md:mt-4">
+                <div id="how-it-works-inner">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+                        <div class="glass-card rounded-2xl p-6 md:p-6 text-center">
+                            <div class="w-12 h-12 md:w-12 md:h-12 mx-auto mb-4 md:mb-4 rounded-full bg-indigo-500 flex items-center justify-center text-2xl md:text-2xl font-bold">1</div>
+                            <h4 class="text-white font-bold mb-2 md:mb-2 text-base md:text-base">Scegli i servizi</h4>
+                            <p class="text-slate-400 text-sm md:text-sm">Seleziona gli interventi che ti servono dalla lista, calcola il preventivo in tempo reale.</p>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6 md:p-6 text-center">
+                            <div class="w-12 h-12 md:w-12 md:h-12 mx-auto mb-4 md:mb-4 rounded-full bg-indigo-500 flex items-center justify-center text-2xl md:text-2xl font-bold">2</div>
+                            <h4 class="text-white font-bold mb-2 md:mb-2 text-base md:text-base">Inserisci il tuo nome</h4>
+                            <p class="text-slate-400 text-sm md:text-sm">Scrivi come ti chiami, il sistema preparerà il messaggio per me.</p>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6 md:p-6 text-center">
+                            <div class="w-12 h-12 md:w-12 md:h-12 mx-auto mb-4 md:mb-4 rounded-full bg-indigo-500 flex items-center justify-center text-2xl md:text-2xl font-bold">3</div>
+                            <h4 class="text-white font-bold mb-2 md:mb-2 text-base md:text-base">Ricevi risposta su WhatsApp</h4>
+                            <p class="text-slate-400 text-sm md:text-sm">Ti contatterò personalmente per confermare il tutto e fissare un appuntamento.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRIGLIA SERVIZI -->
+        <div id="services-grid" class="grid grid-cols-1 gap-4 md:gap-5"></div>
+
+        <!-- POLICY HARDWARE -->
+        <div class="mt-14 md:mt-16 max-w-lg mx-auto p-6 md:p-6 glass-card rounded-2xl text-center">
+            <h3 class="text-xs font-black uppercase tracking-widest text-slate-300 mb-2">* Hardware Policy</h3>
+            <p class="text-slate-500 text-sm leading-relaxed">
+                Le tariffe si riferiscono alla prestazione tecnica professionale. Componenti fisici (SSD, RAM, Hard Disk, display) verranno quotati a parte in base al listino corrente.
+            </p>
+        </div>
+
+        <!-- FAQ -->
+        <div class="mt-14 md:mt-16 max-w-2xl mx-auto">
+            <h3 class="text-center text-white font-display font-bold text-2xl md:text-3xl mb-8 md:mb-8">Domande frequenti</h3>
+            <div class="space-y-4 md:space-y-4">
+                <details class="glass-card rounded-2xl p-5 md:p-6 cursor-pointer group">
+                    <summary class="text-white font-bold list-none flex justify-between items-center text-base md:text-base">
+                        Devo comprare io i pezzi di ricambio?
+                        <i data-lucide="chevron-down" class="w-5 h-5 md:w-5 md:h-5 transition-transform group-open:rotate-180 flex-shrink-0 ml-2"></i>
+                    </summary>
+                    <p class="text-slate-400 text-sm md:text-sm mt-4 md:mt-4">No, posso procurarli io a prezzo di mercato e ti fornirò un preventivo chiaro prima dell'acquisto.</p>
+                </details>
+                <details class="glass-card rounded-2xl p-5 md:p-6 cursor-pointer group">
+                    <summary class="text-white font-bold list-none flex justify-between items-center text-base md:text-base">
+                        Vieni a domicilio o devo portarti il dispositivo?
+                        <i data-lucide="chevron-down" class="w-5 h-5 md:w-5 md:h-5 transition-transform group-open:rotate-180 flex-shrink-0 ml-2"></i>
+                    </summary>
+                    <p class="text-slate-400 text-sm md:text-sm mt-4 md:mt-4">Entrambe le opzioni sono possibili: posso raggiungerti o puoi consegnarmi il dispositivo. Lo decideremo insieme.</p>
+                </details>
+                <details class="glass-card rounded-2xl p-5 md:p-6 cursor-pointer group">
+                    <summary class="text-white font-bold list-none flex justify-between items-center text-base md:text-base">
+                        Quanto tempo ci vuole per un intervento?
+                        <i data-lucide="chevron-down" class="w-5 h-5 md:w-5 md:h-5 transition-transform group-open:rotate-180 flex-shrink-0 ml-2"></i>
+                    </summary>
+                    <p class="text-slate-400 text-sm md:text-sm mt-4 md:mt-4">Dipende dal servizio, ma la maggior parte degli interventi viene completata in 1-2 ore. Ti darò una stima precisa dopo il contatto.</p>
+                </details>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="relative z-20 border-t border-white/10 mt-16 md:mt-20 py-12 md:py-12 px-4">
+        <div class="max-w-7xl mx-auto flex justify-center">
+            <div class="text-center">
+                <h4 class="text-white font-bold text-lg md:text-lg mb-4 md:mb-4">Contatti</h4>
+                <p class="text-slate-400 text-sm md:text-sm flex items-center justify-center gap-2"><i data-lucide="message-circle" class="w-4 h-4 md:w-4 md:h-4"></i>Whatsapp +39 324 749 2353</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- BARRA FLUTTUANTE -->
+    <div id="floating-bar" class="fixed bottom-4 md:bottom-4 inset-x-0 mx-auto w-[95vw] md:w-[94vw] max-w-3xl z-50 hidden">
+        <div id="bar-container" class="relative glass-card bg-black/70 rounded-[2rem] md:rounded-[2rem] p-4 md:p-5 shadow-[0_30px_60px_rgba(0,0,0,0.8)] animate-bar border-white/10 transition-all duration-500">
+            
+            <!-- Pillola toggle drawer -->
+            <div class="absolute top-4 md:top-4 right-5 md:right-5 z-50 flex flex-col items-center">
+                <button id="drawer-pill" onclick="toggleDrawer()" class="relative flex items-center justify-center w-10 h-10 md:w-10 md:h-10 rounded-full bg-white/10 hover:bg-white/20 transition-all text-slate-400 hover:text-white border border-white/10 active:scale-90">
+                    <span id="drawer-badge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs font-black px-2 py-0.5 rounded-full leading-none">+0</span>
+                    <i data-lucide="chevron-up" id="toggle-icon" class="w-6 h-6 md:w-6 md:h-6 transition-transform duration-500"></i>
+                </button>
+            </div>
+
+            <!-- Drawer interno -->
+            <div id="drawer" class="drawer-content">
+                <div class="drawer-inner">
+                    <div class="pt-2 md:pt-2 mb-4 md:mb-4 border-b border-white/5 pb-4 md:pb-4">
+                        <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Riepilogo Interventi</span>
+                        <div id="full-selection-list" class="flex flex-col gap-3 md:gap-3 mt-4 md:mt-4 max-h-52 md:max-h-60 overflow-y-auto no-scrollbar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview compatta -->
+            <div id="preview-wrapper">
+                <div class="preview-inner">
+                    <div id="preview-section" class="flex items-center gap-1.5 md:gap-1.5 mb-4 md:mb-4 pb-4 md:pb-4 border-b border-white/5 pr-14 md:pr-14">
+                        <div id="mini-selection-list" class="flex items-center gap-1.5 md:gap-1.5"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barra inferiore -->
+            <div class="flex flex-col gap-4 md:gap-4 md:flex-row items-center">
+                <div class="flex items-center justify-between w-full md:w-auto gap-4 md:gap-4 md:px-2">
+                    <div>
+                        <div class="flex items-center gap-2 md:gap-2">
+                            <span id="selected-label" class="text-xs md:text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">0 SELEZIONATI</span>
+                            <button id="clear-all-btn" onclick="clearAll()" class="hidden text-slate-400 hover:text-red-400 transition-colors p-1">
+                                <i data-lucide="trash-2" class="w-4 h-4 md:w-4 md:h-4"></i>
+                            </button>
+                        </div>
+                        <div id="total-price" class="text-2xl md:text-3xl font-display font-bold text-white leading-none tracking-tight">0€</div>
+                        <div id="total-savings" class="text-xs md:text-xs font-black text-emerald-400 uppercase">Risparmi 0€</div>
+                    </div>
+                </div>
+                <div class="flex w-full flex-row gap-2 relative">
+                    <div class="flex-1 relative">
+                        <input type="text" id="username" placeholder="Il tuo nome..." class="w-full bg-black/40 border border-white/10 rounded-xl py-3 md:py-3 px-5 md:px-5 text-base font-bold text-white focus:outline-none focus:border-indigo-500/50 transition-colors">
+                        <div id="name-error-tooltip" class="error-tooltip">Inserisci un nome valido (minimo 2 caratteri)</div>
+                    </div>
+                    <button onclick="validateAndSend()" id="send-btn" class="bg-indigo-500 hover:bg-indigo-400 text-white font-bold px-6 md:px-8 py-3 md:py-3 rounded-xl text-sm md:text-sm transition-all shadow-lg active:scale-95 flex-shrink-0">Invia</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETTAGLIO SERVIZIO -->
+    <div id="service-modal" class="fixed inset-0 z-[100] invisible opacity-0 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 md:p-4 transition-all duration-300">
+        <div class="modal-content-anim glass-card w-full max-w-2xl rounded-[2.5rem] md:rounded-[2.5rem] overflow-hidden flex flex-col max-h-[92vh] md:max-h-[90vh]">
+            <div class="relative h-52 md:h-80 w-full overflow-hidden">
+                <img id="modal-img" src="" class="w-full h-full object-cover" alt="Service Detail" onerror="this.src='https://placehold.co/800x600/111/333?text=Servizio'">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                <button onclick="closeModal()" class="absolute top-5 right-5 md:top-6 md:right-6 bg-black/50 backdrop-blur-md p-3 md:p-3 rounded-full border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90">
+                    <i data-lucide="x" class="w-6 h-6 md:w-6 md:h-6"></i>
+                </button>
+            </div>
+            <div class="p-8 md:p-12 overflow-y-auto no-scrollbar">
+                <h2 id="modal-title" class="text-3xl md:text-4xl font-display font-bold text-white mb-5 md:mb-6"></h2>
+                <div id="modal-desc-full" class="text-slate-300 leading-relaxed text-base md:text-lg font-light mb-8 md:mb-8 space-y-4 md:space-y-4"></div>
+                <div class="flex items-center justify-between pt-8 md:pt-8 border-t border-white/5">
+                    <div>
+                        <span class="text-xs font-black text-slate-500 uppercase block mb-1">Costo Intervento</span>
+                        <span id="modal-price-tag" class="text-4xl md:text-4xl font-display font-bold text-white"></span>
+                    </div>
+                    <button id="modal-select-btn" class="bg-indigo-500 text-white font-black px-8 md:px-10 py-4 md:py-4 rounded-2xl text-sm md:text-sm shadow-xl hover:scale-105 active:scale-95 transition-all"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTONE TORNA SU -->
+    <button id="back-to-top" class="fixed bottom-24 md:bottom-24 right-5 md:right-5 z-40 w-12 h-12 md:w-12 md:h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 hover:bg-white/20 active:scale-90" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+        <i data-lucide="arrow-up" class="w-5 h-5 md:w-5 md:h-5"></i>
+    </button>
+
+    <script>
+        // Polyfill per localStorage in ambienti dove potrebbe non essere disponibile
+        const storage = {
+            isAvailable: function() {
+                try {
+                    const test = '__storage_test__';
+                    localStorage.setItem(test, test);
+                    localStorage.removeItem(test);
+                    return true;
+                } catch(e) {
+                    return false;
+                }
+            },
+            setItem: function(key, value) {
+                try {
+                    localStorage.setItem(key, value);
+                    return true;
+                } catch(e) {
+                    console.warn('localStorage non disponibile, uso sessionStorage come fallback');
+                    try {
+                        sessionStorage.setItem(key, value);
+                        return true;
+                    } catch(e2) {
+                        console.warn('Nessuno storage disponibile');
+                        return false;
+                    }
+                }
+            },
+            getItem: function(key) {
+                try {
+                    let value = localStorage.getItem(key);
+                    if (value === null) {
+                        value = sessionStorage.getItem(key);
+                    }
+                    return value;
+                } catch(e) {
+                    try {
+                        return sessionStorage.getItem(key);
+                    } catch(e2) {
+                        return null;
+                    }
+                }
+            },
+            removeItem: function(key) {
+                try {
+                    localStorage.removeItem(key);
+                    sessionStorage.removeItem(key);
+                } catch(e) {
+                    // Ignora errori
+                }
+            }
+        };
+
+        const categories = {
+            pc: { name: 'Windows', color: '#6366f1', gradient: 'from-indigo-900/40', accent: 'text-indigo-300', icon: '🟦' },
+            apple: { name: 'Apple Mac', color: '#a855f7', gradient: 'from-purple-900/40', accent: 'text-purple-300', icon: '🟪' },
+            android_phone: { name: 'Smartphone Android', color: '#10b981', gradient: 'from-emerald-900/40', accent: 'text-emerald-300', icon: '🟩' },
+            android_tablet: { name: 'Tablet Android', color: '#f59e0b', gradient: 'from-amber-900/40', accent: 'text-amber-300', icon: '🟧' },
+            special: { name: 'Speciali', color: '#ec4899', gradient: 'from-pink-900/40', accent: 'text-pink-300', icon: '🟥' },
+            packs: { name: 'Offerte & Pack', color: '#eab308', gradient: 'from-yellow-900/40', accent: 'text-yellow-300', icon: '🟨' }
+        };
+
+        const servicesData = {
+            pc: [
+                { id: 'p1', name: 'Check-up & Velocizzazione', desc: 'Analizzo il tuo computer per rimuovere programmi inutili e virus, facendolo tornare veloce e reattivo come appena comprato.', longDesc: 'Un intervento completo che agisce su tre livelli: rimozione software spazzatura (bloatware), pulizia registri e ottimizzazione dei servizi di avvio. Include una scansione antivirus approfondita e il controllo dell\'integrità del sistema operativo.', price: 40, marketPrice: 100, img: 'https://images.unsplash.com/photo-1663979747290-57d502e9b63f?q=80&w=670&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+                { id: 'p2', name: 'Privacy & AdBlock Pack', desc: 'Blocco per sempre le pubblicità fastidiose e i banner, proteggendo inoltre la tua navigazione su internet da chi vuole spiare i tuoi dati.', longDesc: 'Configurazione professionale dei browser (Chrome, Edge, Firefox) con estensioni AdBlock avanzate. Include il blocco dei tracker pubblicitari e dei cookie di profilazione, rendendo la navigazione 2 volte più veloce e sicura.', price: 20, marketPrice: 60, img: 'https://plus.unsplash.com/premium_photo-1700502264441-cf38978031fa?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+                { id: 'p3', name: 'Installazione SSD', desc: 'Sostituisco il disco interno con uno nuovo e super veloce. Copio tutto il tuo contenuto in modo da non farti perdere nemmeno un file.', longDesc: 'Il miglior upgrade possibile. Sostituisco il vecchio Hard Disk meccanico con un SSD ultra-veloce. Il servizio include la clonazione del disco originale: programmi, file e impostazioni rimarranno esattamente dove sono, ma il PC si accenderà in pochi secondi e sarà molto più veloce di prima.', price: 40, marketPrice: 120, hasNote: true, img: 'https://images.unsplash.com/photo-1720048169378-d9e1f07cfc5b?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+                { id: 'p4', name: 'Formattazione Windows', desc: 'Cancello completamente il computer e reinstallo il sistema operativo da zero, mettendoti i programmi base pronti per essere usati.', longDesc: 'Reinstallazione pulita dell\'ultima versione di Windows. Include il backup preventivo (opzionale), l\'installazione di tutti i driver hardware, pacchetto Office base, utility di sistema e configurazione iniziale personalizzata.', price: 70, marketPrice: 140, img: 'https://images.unsplash.com/photo-1620843002805-05a08cb72f57?q=80&w=1548&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }
+            ],
+            apple: [
+                { id: 'a1', name: 'Aggiornamento MacOS Legacy', desc: 'Aggiorno il tuo vecchio Mac all\'ultima versione, facendoti usare programmi nuovi anche se per la Apple il computer è considerato troppo vecchio.', longDesc: 'Tramite patch specializzate, installo versioni recenti di macOS su macchine non più supportate ufficialmente. Ideale per chi vuole continuare a usare programmi come Photoshop o Office che richiedono sistemi recenti su hardware ancora valido.', price: 50, marketPrice: 160, img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&q=80&w=800' },
+                { id: 'a2', name: 'Ottimizzazione MacOS', desc: 'Faccio una pulizia profonda del tuo Mac, sistemando le impostazioni nascoste per eliminare la lentezza.', longDesc: 'Analisi dei processi in background, pulizia delle librerie di sistema e dei file di cache accumulati. Controllo dello stato di salute del disco e ottimizzazione della gestione RAM per garantire fluidità nelle operazioni quotidiane.', price: 30, marketPrice: 100, img: 'https://images.unsplash.com/photo-1583273501577-e50488d12359?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+                { id: 'a3', name: 'Privacy Safari & Sicurezza', desc: 'Sistemo la tua navigazione in internet per bloccare le pubblicità e configuro il Mac per proteggerti al meglio dai virus.', longDesc: 'Rafforzamento della privacy su Safari: blocco fingerprinting, eliminazione pop-up invasivi e configurazione del Firewall Apple. Fornisco strumenti per navigare in anonimato e proteggere le password memorizzate.', price: 30, marketPrice: 80, img: 'https://images.unsplash.com/photo-1600859343429-39b74a143f12?q=80&w=1548&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }
+            ],
+            android_phone: [
+                { id: 'm1', name: 'Migrazione Dati Completa', desc: 'Passo in modo sicuro tutti i tuoi dati, messaggi WhatsApp, foto e rubrica dal vecchio telefono a quello nuovo.', longDesc: 'Trasferimento garantito di foto, video, contatti e intere cronologie WhatsApp tra telefoni Android. Mi assicuro che ogni configurazione importante venga replicata sul nuovo dispositivo senza perdite.', price: 30, marketPrice: 80, img: 'https://images.unsplash.com/photo-1695978919004-9489d2e3c94e?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+                { id: 'm2', name: 'Aggiornamento e Backup', desc: 'Salvo al sicuro tutte le tue foto e i tuoi file importanti, e aggiorno il telefono per farlo funzionare senza intoppi.', longDesc: 'Configurazione di backup cloud automatici (Google Foto/Drive) e salvataggio locale dei dati. Include l\'installazione delle ultime patch di sicurezza e un controllo della batteria.', price: 50, marketPrice: 110, img: 'https://images.unsplash.com/photo-1553179459-4514c0f52f41?q=80&w=1838&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }
+            ],
+            android_tablet: [
+                { id: 't1', name: 'Migrazione Dati Completa', desc: 'Sposto tutte le tue foto, i giochi e le app dal tuo vecchio tablet a quello nuovo senza perdere nessun dato.', longDesc: 'Procedura identica a quella smartphone ma ottimizzata per le app tablet e i file multimediali pesanti. Configuro il tablet per essere subito pronto all\'uso con le tue vecchie credenziali.', price: 30, marketPrice: 80, img: 'https://images.unsplash.com/photo-1720048170998-5f1faac63324?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+                { id: 't2', name: 'Aggiornamento e Backup', desc: 'Faccio una copia di sicurezza di tutto quello che hai sul tablet e lo aggiorno per farti scaricare le app più moderne.', longDesc: 'Analisi del firmware attuale e installazione delle versioni più recenti. Creazione di un archivio di sicurezza per prevenire la perdita di dati in caso di guasto hardware.', price: 50, marketPrice: 110, img: 'https://images.unsplash.com/photo-1662221356784-14b60d842253?q=80&w=1548&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }
+            ],
+            special: [
+                { id: 's1', name: 'Recupero Dati Hardware', desc: 'Recupero foto, documenti e ricordi preziosi da computer, chiavette o schedine che non funzionano più o che sono stati formattati per errore.', longDesc: 'Intervento tecnico professionale per il recupero di file cancellati o da supporti con errori logici/hardware parziali. Analisi profonda dei settori del disco per estrarre il massimo numero di dati integri.', price: 80, marketPrice: 400, img: 'https://images.unsplash.com/photo-1597852074816-d933c7d2b988?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+                { id: 's2', name: 'Sessione Tutoring Digitale', desc: 'Ci sediamo insieme per 30 minuti e ti spiego con calma e parole semplici come usare lo SPID, gestire le password o la posta elettronica.', longDesc: 'Lezione privata frontale (o remota) focalizzata sulle tue necessità: gestione identità digitale SPID, utilizzo di app bancarie, organizzazione file, sicurezza password e uso della PEC.', price: 20, marketPrice: 70, img: 'https://plus.unsplash.com/premium_photo-1661725357418-fb09ff7c0aae?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }
+            ],
+            packs: [
+                { id: 'pk1', name: 'Pack Rinascita PC', desc: 'La combo perfetta per far rinascere un vecchio computer: pulizia completa, rimozione virus e installazione di un disco super veloce.', longDesc: 'Il pacchetto più richiesto: unisce Check-up Software e Installazione SSD. Risparmi tempo e denaro dando al tuo vecchio PC prestazioni superiori a quando era nuovo. Consigliato per computer con più di 3 anni di vita.', price: 120, marketPrice: 250, hasNote: true, img: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+                { id: 'pk2', name: 'Pack Smartphone Senza Pensieri', desc: 'Passo tutti i tuoi dati sul nuovo telefono e mi fermo 30 minuti per spiegarti con calma come usare le funzioni nuove.', longDesc: 'Tutto incluso: migrazione completa dei dati dal vecchio al nuovo telefono + 30 minuti di spiegazione per farti padroneggiare subito il nuovo sistema e le sue impostazioni.', price: 60, marketPrice: 150, img: 'https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=2236&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+                { id: 'pk3', name: 'Pack Sicurezza Totale', desc: 'Rendo il tuo computer impenetrabile bloccando la pubblicità, e faccio una scansione profonda per rimuovere virus e malware.', longDesc: 'Unisce la pulizia software antivirus al blocco pubblicità web (AdBlock). La soluzione definitiva per chi vuole navigare in pace e proteggere i propri conti correnti e dati privati dagli attacchi hacker.', price: 60, marketPrice: 160, img: 'https://plus.unsplash.com/premium_photo-1700681802462-aa86f630d2e5?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }
+            ]
+        };
+
+        let selected = [];
+        let currentCat = 'pc';
+        let drawerOpen = false;
+        let hiwOpen = false;
+
+        function saveSelection() {
+            storage.setItem('selectedServices', JSON.stringify(selected));
+        }
+        function loadSelection() {
+            const saved = storage.getItem('selectedServices');
+            if (saved) {
+                try { selected = JSON.parse(saved); } catch(e) { selected = []; }
+            }
+        }
+        function saveName() {
+            const nameField = document.getElementById('username');
+            if (nameField.value.trim()) {
+                storage.setItem('userName', nameField.value.trim());
+            }
+        }
+        function loadName() {
+            const saved = storage.getItem('userName');
+            if (saved) {
+                document.getElementById('username').value = saved;
+            }
+        }
+
+        function updateScrollHints() {
+            const el = document.getElementById('cat-scroll');
+            const hintLeft = document.getElementById('scroll-hint-left');
+            const hintRight = document.getElementById('scroll-hint-right');
+            const wrapper = document.getElementById('cat-wrapper');
+
+            if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 10) {
+                wrapper.classList.add('at-end');
+            } else {
+                wrapper.classList.remove('at-end');
+            }
+
+            if (el.scrollWidth > el.clientWidth) {
+                if (el.scrollLeft > 10) {
+                    hintLeft.style.opacity = '1';
+                    hintLeft.style.pointerEvents = 'auto';
+                } else {
+                    hintLeft.style.opacity = '0';
+                    hintLeft.style.pointerEvents = 'none';
+                }
+                if (el.scrollLeft + el.clientWidth < el.scrollWidth - 10) {
+                    hintRight.style.opacity = '1';
+                    hintRight.style.pointerEvents = 'auto';
+                } else {
+                    hintRight.style.opacity = '0';
+                    hintRight.style.pointerEvents = 'none';
+                }
+            }
+        }
+
+        function scrollCategories(direction) {
+            const el = document.getElementById('cat-scroll');
+            el.scrollBy({ left: direction * 200, behavior: 'smooth' });
+        }
+
+        function toggleHowItWorks() {
+            hiwOpen = !hiwOpen;
+            const content = document.getElementById('how-it-works-content');
+            const arrow = document.getElementById('how-it-works-arrow');
+            const label = document.getElementById('how-it-works-label');
+            
+            if (hiwOpen) {
+                content.classList.add('hiw-open');
+                arrow.classList.add('rotated');
+                label.innerText = 'Nascondi';
+            } else {
+                content.classList.remove('hiw-open');
+                arrow.classList.remove('rotated');
+                label.innerText = 'Scopri';
+            }
+        }
+
+        function renderServices() {
+            const grid = document.getElementById('services-grid');
+            const catInfo = categories[currentCat];
+            
+            grid.classList.add('view-list');
+            grid.classList.add('grid-cols-1');
+
+            grid.innerHTML = servicesData[currentCat].map((s, index) => {
+                const isSelected = selected.includes(s.id);
+                const delay = index * 0.04;
+                
+                return `
+                <div id="card-${s.id}" onclick="toggle('${s.id}')" style="animation-delay: ${delay}s" 
+                     class="animate-card service-card relative overflow-hidden rounded-[1.2rem] md:rounded-[1.2rem] cursor-pointer border border-white/10 transition-all duration-500 group flex flex-col min-h-[200px] md:min-h-[240px] ${isSelected ? 'service-selected' : ''} active:scale-[0.98]">
+                    
+                    <div class="absolute inset-0 z-0 card-overlay">
+                        <div class="absolute inset-0 bg-gradient-to-br ${catInfo.gradient} to-black transition-all duration-700 group-hover:scale-110"></div>
+                        <div id="overlay-${s.id}" class="absolute inset-0 transition-all duration-500" style="background-color: ${isSelected ? catInfo.color + '33' : 'transparent'}"></div>
+                    </div>
+
+                    <img src="${s.img}" class="service-thumb block" onerror="this.src='https://placehold.co/800x600/111/333?text=Servizio'" alt="${s.name}">
+
+                    <div class="relative z-10 p-5 md:p-7 flex flex-col gap-3 md:gap-3 h-full flex-1 card-content">
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-bold text-base md:text-lg text-white max-w-[75%] leading-tight tracking-tight">${s.name}</h4>
+                            <div class="flex gap-2 md:gap-2">
+                                <button onclick="event.stopPropagation(); openModal('${s.id}')" class="w-9 h-9 md:w-8 md:h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/30 transition-all active:scale-90">
+                                    <i data-lucide="maximize-2" class="w-4 h-4 md:w-4 md:h-4 text-white"></i>
+                                </button>
+                                <div id="check-bg-${s.id}" class="w-6 h-6 md:w-6 md:h-6 rounded-full border flex-shrink-0 flex items-center justify-center transition-all duration-300 ${isSelected ? 'scale-110' : 'border-white/20 bg-black/20'}" style="background-color: ${isSelected ? catInfo.color : ''}; border-color: ${isSelected ? catInfo.color : ''}">
+                                    <i id="check-icon-${s.id}" data-lucide="check" class="w-4 h-4 md:w-3.5 md:h-3.5 transition-colors ${isSelected ? 'text-white' : 'text-transparent'}"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-slate-300 text-sm md:text-sm leading-relaxed font-light">${s.desc}</p>
+                        
+                        <div class="flex flex-col gap-1.5 mt-auto pt-4 md:pt-4 border-t border-white/10">
+                            <div class="flex justify-between items-center text-xs md:text-xs uppercase font-black text-slate-500">
+                                <span>Prezzo Negozi</span>
+                                <span class="line-through decoration-red-600 decoration-[2px] text-slate-300 text-sm md:text-sm">${s.marketPrice}€</span>
+                            </div>
+                            <div class="flex justify-between items-end">
+                                <span class="text-xs md:text-xs font-black uppercase tracking-widest ${catInfo.accent} mb-1">Mio Prezzo</span>
+                                <span class="text-3xl md:text-5xl font-display font-bold text-white leading-none">${s.price}€${s.hasNote || s.id === 'p3' ? '*' : ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+            lucide.createIcons();
+        }
+
+        function openModal(id) {
+            const service = Object.values(servicesData).flat().find(s => s.id === id);
+            if (!service) return;
+
+            document.getElementById('modal-title').innerText = service.name;
+            document.getElementById('modal-img').src = service.img;
+            document.getElementById('modal-desc-full').innerHTML = service.longDesc;
+            document.getElementById('modal-price-tag').innerText = service.price + '€';
+            
+            const selectBtn = document.getElementById('modal-select-btn');
+            const isSelected = selected.includes(id);
+            
+            selectBtn.innerText = isSelected ? "RIMUOVI" : "SELEZIONA";
+            selectBtn.style.backgroundColor = isSelected ? "#ef4444" : categories[currentCat].color;
+            
+            selectBtn.onclick = () => {
+                toggle(id);
+                closeModal();
+            };
+
+            document.getElementById('service-modal').classList.add('modal-active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('service-modal').classList.remove('modal-active');
+            document.body.style.overflow = '';
+        }
+
+        function switchCategory(cat, btn) {
+            currentCat = cat;
+            const catInfo = categories[cat];
+            
+            const titleEl = document.getElementById('hero-title');
+            const targetScrollPosition = titleEl.getBoundingClientRect().top + window.scrollY - 20;
+            window.scrollTo({ top: targetScrollPosition, behavior: 'smooth' });
+
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.classList.remove('text-white');
+                b.classList.add('bg-transparent', 'text-slate-400');
+                b.style.backgroundColor = 'transparent';
+            });
+            btn.classList.remove('bg-transparent', 'text-slate-400');
+            btn.classList.add('text-white');
+            btn.style.backgroundColor = catInfo.color;
+
+            document.getElementById('hero-accent').style.backgroundImage = `linear-gradient(to right, ${catInfo.color}, #f8fafc)`;
+            document.getElementById('send-btn').style.backgroundColor = catInfo.color;
+
+            renderServices();
+        }
+
+        function toggle(id) {
+            const index = selected.indexOf(id);
+            if (index > -1) selected.splice(index, 1);
+            else selected.push(id);
+            saveSelection();
+            updateCardVisuals(id);
+            updateUI();
+        }
+
+        function clearAll() {
+            selected = [];
+            saveSelection();
+            renderServices();
+            updateUI();
+        }
+
+        function updateCardVisuals(id) {
+            const card = document.getElementById(`card-${id}`);
+            if (!card) return;
+            const catInfo = categories[currentCat];
+            const checkBg = document.getElementById(`check-bg-${id}`);
+            const checkIcon = document.getElementById(`check-icon-${id}`);
+            const overlay = document.getElementById(`overlay-${id}`);
+            const isSelected = selected.includes(id);
+
+            if (isSelected) {
+                card.classList.add('service-selected');
+                card.style.borderColor = catInfo.color + '80';
+                checkBg.style.backgroundColor = catInfo.color;
+                checkBg.style.borderColor = catInfo.color;
+                checkBg.classList.add('scale-110');
+                checkIcon.classList.replace('text-transparent', 'text-white');
+                overlay.style.backgroundColor = catInfo.color + '33';
+            } else {
+                card.classList.remove('service-selected');
+                card.style.borderColor = '';
+                checkBg.style.backgroundColor = '';
+                checkBg.style.borderColor = '';
+                checkBg.classList.remove('scale-110');
+                checkIcon.classList.replace('text-white', 'text-transparent');
+                overlay.style.backgroundColor = 'transparent';
+            }
+        }
+
+        function toggleDrawer() {
+            drawerOpen = !drawerOpen;
+            const container = document.getElementById('bar-container');
+            const icon = document.getElementById('toggle-icon');
+            
+            if (drawerOpen) {
+                container.classList.add('drawer-open');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                container.classList.remove('drawer-open');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function smoothUpdateHTML(element, newHTML, shouldAnimate) {
+            if (!element) return;
+            if (element.animationTimeout) {
+                clearTimeout(element.animationTimeout);
+                element.style.transition = '';
+            }
+            if (!shouldAnimate) {
+                element.innerHTML = newHTML;
+                lucide.createIcons();
+                return;
+            }
+            const oldHeight = element.offsetHeight;
+            element.innerHTML = newHTML;
+            lucide.createIcons();
+            element.style.height = 'auto';
+            const newHeight = element.offsetHeight;
+            if (oldHeight === newHeight) { element.style.height = ''; return; }
+            element.style.height = oldHeight + 'px';
+            element.offsetHeight; 
+            element.style.overflow = 'hidden'; 
+            element.style.transition = 'height 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+            element.style.height = newHeight + 'px';
+            element.animationTimeout = setTimeout(() => {
+                element.style.transition = '';
+                element.style.height = ''; 
+                element.style.overflow = ''; 
+                element.animationTimeout = null;
+            }, 400);
+        }
+
+        function updateUI() {
+            const bar = document.getElementById('floating-bar');
+            const totalDisplay = document.getElementById('total-price');
+            const savingsDisplay = document.getElementById('total-savings');
+            const label = document.getElementById('selected-label');
+            const miniList = document.getElementById('mini-selection-list');
+            const fullList = document.getElementById('full-selection-list');
+            const badge = document.getElementById('drawer-badge');
+            const clearBtn = document.getElementById('clear-all-btn');
+            const backToTop = document.getElementById('back-to-top');
+            const allServices = Object.values(servicesData).flat();
+
+            if (selected.length > 0) {
+                if (bar.classList.contains('hidden')) bar.classList.remove('hidden');
+                label.innerText = `${selected.length} SELEZIONATI`;
+                clearBtn.classList.remove('hidden');
+                backToTop.style.bottom = '7rem';
+                
+                let total = 0;
+                let totalMarket = 0;
+                let previewHtml = '';
+                let fullHtml = '';
+                const lastTwo = selected.slice(-2);
+                
+                // Costruisci l'HTML raggruppato per categoria per il drawer espanso
+                const groupedByCategory = {};
+                selected.forEach(id => {
+                    const s = allServices.find(x => x.id === id);
+                    if (!s) return;
+                    
+                    // Trova la categoria del servizio
+                    let serviceCategory = null;
+                    for (const [catKey, catItems] of Object.entries(servicesData)) {
+                        if (catItems.some(item => item.id === id)) {
+                            serviceCategory = catKey;
+                            break;
+                        }
+                    }
+                    
+                    if (!groupedByCategory[serviceCategory]) {
+                        groupedByCategory[serviceCategory] = [];
+                    }
+                    groupedByCategory[serviceCategory].push(s);
+                    
+                    total += s.price;
+                    totalMarket += s.marketPrice;
+                });
+
+                // Genera HTML per il drawer espanso
+                for (const [catKey, catServices] of Object.entries(groupedByCategory)) {
+                    const catInfo = categories[catKey];
+                    fullHtml += `
+                        <div class="mb-3 md:mb-3">
+                            <div class="flex items-center gap-2 mb-2 md:mb-2">
+                                <span class="text-sm md:text-sm">${catInfo.icon}</span>
+                                <span class="text-xs md:text-xs font-black uppercase tracking-widest" style="color: ${catInfo.color}">${catInfo.name}</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2 md:gap-2">
+                                ${catServices.map(s => `
+                                    <div class="flex items-center gap-1.5 md:gap-1.5 bg-white/10 text-white px-3 md:px-2.5 py-1.5 md:py-1.5 rounded-lg text-xs md:text-xs font-bold border border-white/5 shadow-sm hover:bg-white/20 transition-colors">
+                                        <span class="truncate max-w-[120px] md:max-w-none">${s.name}</span>
+                                        <span class="text-slate-400 text-[10px] md:text-[10px]">${s.price}€</span>
+                                        <button onclick="event.stopPropagation(); toggle('${s.id}')" class="focus:outline-none hover:scale-110 active:scale-95 transition-transform flex-shrink-0">
+                                            <i data-lucide="x" class="w-3 h-3 md:w-3 md:h-3 text-slate-400 hover:text-white"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Genera HTML per la preview compatta (ultimi 2)
+                selected.forEach(id => {
+                    const s = allServices.find(x => x.id === id);
+                    if (lastTwo.includes(id)) {
+                        previewHtml += `
+                            <div class="flex-shrink-0 bg-white/10 text-white px-2 py-1 rounded-lg text-xs font-bold border border-white/5 shadow-sm">
+                                ${s.name}
+                            </div>
+                        `;
+                    }
+                });
+
+                const saving = totalMarket - total;
+                totalDisplay.innerText = `${total}€`;
+                savingsDisplay.innerText = `Risparmi ${saving}€`;
+
+                if (selected.length > 2) {
+                    badge.classList.remove('hidden');
+                    badge.innerText = `+${selected.length - 2}`;
+                } else {
+                    badge.classList.add('hidden');
+                }
+
+                smoothUpdateHTML(miniList, previewHtml, !drawerOpen);
+                smoothUpdateHTML(fullList, fullHtml, drawerOpen);
+            } else {
+                bar.classList.add('hidden');
+                clearBtn.classList.add('hidden');
+                badge.classList.add('hidden');
+                backToTop.style.bottom = '5rem';
+                if(drawerOpen) toggleDrawer();
+                miniList.innerHTML = '';
+                fullList.innerHTML = '';
+                totalDisplay.innerText = '0€';
+                savingsDisplay.innerText = 'Risparmi 0€';
+            }
+        }
+
+        // Validazione nome migliorata: accetta lettere, numeri, spazi, apostrofi, trattini e punti
+        function validateName(name) {
+            const trimmed = name.trim();
+            // Almeno 2 caratteri, può contenere lettere (incluse accentate), numeri, spazi, apostrofi, trattini, punti
+            return /^[a-zA-ZàèéìòùÀÈÉÌÒÙäëïöüÄËÏÖÜâêîôûÂÊÎÔÛçÇ0-9\s'\-\.]{2,}$/.test(trimmed);
+        }
+
+        function validateAndSend() {
+            const nameField = document.getElementById('username');
+            const errorTooltip = document.getElementById('name-error-tooltip');
+            const name = nameField.value.trim();
+            
+            errorTooltip.classList.remove('show');
+            nameField.classList.remove('shake');
+
+            if (!validateName(name)) {
+                errorTooltip.classList.add('show');
+                nameField.classList.add('shake');
+                nameField.focus();
+                setTimeout(() => {
+                    errorTooltip.classList.remove('show');
+                }, 2500);
+                return;
+            }
+            saveName();
+            send();
+        }
+
+        function send() {
+            const nameField = document.getElementById('username');
+            const name = nameField.value.trim();
+            if (!name) return;
+            
+            let total = 0;
+            let message = `Ciao! Sono *${name}*.\n\nHo selezionato i seguenti interventi:`;
+
+            for (const [catKey, catItems] of Object.entries(servicesData)) {
+                const selectedInCategory = catItems.filter(item => selected.includes(item.id));
+                const catInfo = categories[catKey];
+                if (selectedInCategory.length > 0) {
+                    message += `\n\n${catInfo.icon} *${catInfo.name.toUpperCase()}*`;
+                    selectedInCategory.forEach(s => { message += `\n- ${s.name} (${s.price}€)`; total += s.price; });
+                }
+            }
+            message += `\n\n*Totale stimato: ${total}€*`;
+            window.location.href = `https://wa.me/393247492353?text=${encodeURIComponent(message)}`;
+        }
+
+        function handleBackToTop() {
+            const btn = document.getElementById('back-to-top');
+            const bar = document.getElementById('floating-bar');
+            const bottomOffset = bar.classList.contains('hidden') ? '5rem' : '7rem';
+            
+            if (window.scrollY > 500) {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+                btn.style.bottom = bottomOffset;
+            } else {
+                btn.style.opacity = '0';
+                btn.style.pointerEvents = 'none';
+            }
+        }
+
+        window.addEventListener('scroll', () => {
+            handleBackToTop();
+            updateScrollHints();
+        });
+
+        window.onload = () => {
+            loadSelection();
+            loadName();
+            const firstBtn = document.querySelector('.cat-btn');
+            switchCategory('pc', firstBtn);
+            
+            setTimeout(() => {
+                selected.forEach(id => updateCardVisuals(id));
+                updateUI();
+                updateScrollHints();
+            }, 100);
+            
+            handleBackToTop();
+        };
+        window.addEventListener('resize', () => { updateScrollHints(); });
+    </script>
+</body>
+</html>
